@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchCurrentCustomer } from '../api/customerApi.js';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { filterCustomersByName } from '../utils/customerSearch.js';
 
 const FIELDS = [
   ['Customer ID', 'id'],
@@ -17,7 +18,7 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-export default function CustomerDetailsPage() {
+export default function CustomerDetailsPage({ searchQuery }) {
   const { token, logout } = useAuth();
   const navigate = useNavigate();
   const [customer, setCustomer] = useState(null);
@@ -49,6 +50,9 @@ export default function CustomerDetailsPage() {
     );
   }
   if (!customer) return <p aria-busy="true">Loading your details…</p>;
+
+  const matches = filterCustomersByName([customer], searchQuery);
+  if (matches.length === 0) return <p>No customer found.</p>;
 
   return (
     <section className="card">

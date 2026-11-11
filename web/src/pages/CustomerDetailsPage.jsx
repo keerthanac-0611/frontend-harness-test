@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchCurrentCustomer } from '../api/customerApi';
-import { useAuth } from '../auth/AuthContext';
+import { fetchCurrentCustomer } from '../api/customerApi.js';
+import { useAuth } from '../auth/AuthContext.jsx';
 
 const FIELDS = [
   ['Customer ID', 'id'],

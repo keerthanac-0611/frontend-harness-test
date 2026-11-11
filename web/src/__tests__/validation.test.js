@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateLogin, validatePassword, validateRegistration } from '../utils/validation';
+import { validateLogin, validatePassword, validateRegistration } from '../utils/validation.js';
 
 const valid = {
   firstName: 'Jane',

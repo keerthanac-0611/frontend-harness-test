@@ -11,19 +11,19 @@ validation, routing, session handling). It is a **consumer** of the `customer-ap
 ## Layout
 | Path | Responsibility |
 |------|----------------|
-| `src/api/endpoints.js` | **Only** place where API paths are declared (scanned by the harness integration reviewer) |
-| `src/api/client.js` | fetch wrapper, error mapping (`ApiError`, FastAPI 422 → field errors) |
-| `src/api/customerApi.js` | Typed calls per contract endpoint (snake_case ↔ camelCase mapping) |
-| `src/auth/` | Token storage (sessionStorage), `AuthProvider`, `ProtectedRoute` |
-| `src/pages/` | Register, Login, Customer Details pages |
-| `src/components/` | Reusable presentational components |
-| `src/utils/validation.js` | Client-side validation mirroring backend rules (UX only) |
+| `web/src` | **Only** place where API paths are declared (scanned by the harness integration reviewer) |
+| `web/src` | fetch wrapper, error mapping (`ApiError`, FastAPI 422 → field errors) |
+| `web/src` | Typed calls per contract endpoint (snake_case ↔ camelCase mapping) |
+| `web/src` | Token storage (sessionStorage), `AuthProvider`, `ProtectedRoute` |
+| `web/src` | Register, Login, Customer Details pages |
+| `web/src` | Reusable presentational components |
+| `web/src` | Client-side validation mirroring backend rules (UX only) |
 
 ## Rules
-1. Never hard-code API paths outside `src/api/endpoints.js`.
+1. Never hard-code API paths outside `web/src`.
 2. Request/response field names must match the contract exactly (snake_case on the wire).
 3. Never log or persist passwords; tokens live only in `sessionStorage`.
-4. Every new screen / behaviour needs a test in `src/__tests__/`.
+4. Every new screen / behaviour needs a test in `web/src`.
 5. Forms must be accessible (labels, `aria-invalid`, `role="alert"` for errors).
 
 ## Commands

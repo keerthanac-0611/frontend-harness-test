@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { loginCustomer } from '../api/customerApi';
+import { loginCustomer } from '../api/customerApi.js';
 
 const TOKEN_KEY = 'customer_portal_token';
 const AuthContext = createContext(null);

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { registerCustomer } from '../api/customerApi';
-import FormField from '../components/FormField';
-import { validateRegistration } from '../utils/validation';
+import { registerCustomer } from '../api/customerApi.js';
+import FormField from '../components/FormField.jsx';
+import { validateRegistration } from '../utils/validation.js';
 
 const INITIAL = { firstName: '', lastName: '', email: '', password: '', confirmPassword: '', phone: '', address: '' };
 

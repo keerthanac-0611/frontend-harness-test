@@ -2,8 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
-import App from '../App';
-import { AuthProvider } from '../auth/AuthContext';
+import App from '../App.jsx';
+import { AuthProvider } from '../auth/AuthContext.jsx';
 
 const CUSTOMER = {
   id: 7,

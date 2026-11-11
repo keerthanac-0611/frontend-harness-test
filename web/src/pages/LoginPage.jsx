@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
-import FormField from '../components/FormField';
-import { validateLogin } from '../utils/validation';
+import { useAuth } from '../auth/AuthContext.jsx';
+import FormField from '../components/FormField.jsx';
+import { validateLogin } from '../utils/validation.js';
 
 export default function LoginPage() {
   const location = useLocation();

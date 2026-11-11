@@ -1,5 +1,5 @@
-import { request } from './client';
-import { ENDPOINTS } from './endpoints';
+import { request } from './client.js';
+import { ENDPOINTS } from './endpoints.js';
 
 export function registerCustomer({ email, password, firstName, lastName, phone, address }) {
   return request('POST', ENDPOINTS.register, {

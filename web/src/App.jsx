@@ -1,9 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import ProtectedRoute from './auth/ProtectedRoute';
-import NavBar from './components/NavBar';
-import CustomerDetailsPage from './pages/CustomerDetailsPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
+import ProtectedRoute from './auth/ProtectedRoute.jsx';
+import NavBar from './components/NavBar.jsx';
+import CustomerDetailsPage from './pages/CustomerDetailsPage.jsx';
+import LoginPage from './pages/LoginPage.jsx';
+import RegisterPage from './pages/RegisterPage.jsx';
 
 export default function App() {
   return (

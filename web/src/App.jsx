@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { fetchCustomerList } from './api/customerApi.js';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
 import ProtectedRoute from './auth/ProtectedRoute.jsx';
@@ -11,8 +12,24 @@ export default function App() {
   const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [customerList, setCustomerList] = useState(null);
+  const [customerListError, setCustomerListError] = useState('');
+
   useEffect(() => {
-    if (!isAuthenticated) setSearchQuery('');
+    if (!isAuthenticated) {
+      setSearchQuery('');
+      setCustomerList(null);
+      setCustomerListError('');
+      return undefined;
+    }
+    // Fetched once per logged-in session; filtering happens locally.
+    let active = true;
+    fetchCustomerList()
+      .then((data) => active && setCustomerList(data))
+      .catch((err) => active && setCustomerListError(err.message));
+    return () => {
+      active = false;
+    };
   }, [isAuthenticated]);
 
   return (
@@ -27,7 +44,11 @@ export default function App() {
             path="/customer"
             element={
               <ProtectedRoute>
-                <CustomerDetailsPage searchQuery={searchQuery} />
+                <CustomerDetailsPage
+                  searchQuery={searchQuery}
+                  customerList={customerList}
+                  customerListError={customerListError}
+                />
               </ProtectedRoute>
             }
           />

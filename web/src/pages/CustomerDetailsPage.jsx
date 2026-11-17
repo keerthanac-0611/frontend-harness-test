@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchCurrentCustomer } from '../api/customerApi.js';
 import { useAuth } from '../auth/AuthContext.jsx';
+import CustomerSearchResults from '../components/CustomerSearchResults.jsx';
 import { filterCustomersByName } from '../utils/customerSearch.js';
 
 const FIELDS = [
@@ -18,7 +19,7 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-export default function CustomerDetailsPage({ searchQuery }) {
+export default function CustomerDetailsPage({ searchQuery, customerList, customerListError }) {
   const { token, logout } = useAuth();
   const navigate = useNavigate();
   const [customer, setCustomer] = useState(null);
@@ -42,6 +43,18 @@ export default function CustomerDetailsPage({ searchQuery }) {
     };
   }, [token, logout, navigate]);
 
+  if (searchQuery.trim() !== '') {
+    if (customerListError) {
+      return (
+        <div className="alert alert-error" role="alert">
+          {customerListError}
+        </div>
+      );
+    }
+    if (!customerList) return <p aria-busy="true">Loading customers…</p>;
+    return <CustomerSearchResults customers={filterCustomersByName(customerList, searchQuery)} />;
+  }
+
   if (error) {
     return (
       <div className="alert alert-error" role="alert">
@@ -50,9 +63,6 @@ export default function CustomerDetailsPage({ searchQuery }) {
     );
   }
   if (!customer) return <p aria-busy="true">Loading your details…</p>;
-
-  const matches = filterCustomersByName([customer], searchQuery);
-  if (matches.length === 0) return <p>No customer found.</p>;
 
   return (
     <section className="card">

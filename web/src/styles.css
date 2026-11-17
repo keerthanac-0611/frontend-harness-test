@@ -47,3 +47,7 @@ button[disabled] { opacity: 0.6; cursor: not-allowed; }
 .details-row { display: flex; padding: 0.5rem 0; border-bottom: 1px solid #e5e7eb; }
 .details-row dt { width: 40%; font-weight: 600; }
 .details-row dd { margin: 0; }
+
+.search-results-title { margin-top: 0; font-size: 1.1rem; }
+.search-results { margin: 0; padding-left: 1.25rem; }
+.search-results li { padding: 0.25rem 0; overflow-wrap: anywhere; }

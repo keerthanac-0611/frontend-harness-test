@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -15,6 +15,12 @@ const CUSTOMER = {
   created_at: '2026-01-01T00:00:00+00:00',
 };
 
+const LIST = [
+  { id: 3, first_name: 'Ana', last_name: 'Smith' },
+  { id: 7, first_name: 'Jane', last_name: 'Doe' },
+  { id: 9, first_name: 'Daniel', last_name: 'Lee' },
+];
+
 function jsonResponse(status, body) {
   return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
 }
@@ -29,7 +35,175 @@ function renderApp(path) {
   );
 }
 
+function mockLoginAndCustomerFetch() {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
+    url === '/api/auth/login'
+      ? jsonResponse(200, { access_token: 'tkn', token_type: 'bearer', expires_in: 3600, customer: CUSTOMER })
+      : url === '/api/customers'
+        ? jsonResponse(200, LIST)
+        : jsonResponse(200, CUSTOMER),
+  );
+  return fetchMock;
+}
+
+async function logIn(user) {
+  await user.type(screen.getByLabelText(/^email/i), 'jane@example.com');
+  await user.type(screen.getByLabelText(/^password/i), 'Str0ngPass');
+  await user.click(screen.getByRole('button', { name: /log in/i }));
+}
+
 describe('customer flows', () => {
+  it('shows the search input in the authenticated navbar only', async () => {
+    const fetchMock = mockLoginAndCustomerFetch();
+    const user = userEvent.setup();
+    renderApp('/login');
+
+    expect(screen.queryByRole('searchbox', { name: /search by customer name/i })).not.toBeInTheDocument();
+    await logIn(user);
+
+    const search = await screen.findByRole('searchbox', { name: /search by customer name/i });
+    const nav = screen.getByRole('navigation');
+    expect(search).toHaveAttribute('placeholder', 'Search by customer name');
+    expect(within(nav).getByText('Customer Portal').compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/api/customers/me')).toHaveLength(1);
+  });
+
+  it('filters the fetched customer list locally and restores details for a blank query', async () => {
+    const fetchMock = mockLoginAndCustomerFetch();
+    const user = userEvent.setup();
+    renderApp('/login');
+    await logIn(user);
+
+    const search = await screen.findByRole('searchbox', { name: /search by customer name/i });
+    expect(await screen.findByText(/welcome, jane doe/i)).toBeInTheDocument();
+
+    await user.type(search, ' AN ');
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Ana Smith', 'Jane Doe', 'Daniel Lee']);
+    expect(screen.queryByText(/welcome, jane doe/i)).not.toBeInTheDocument();
+    await user.clear(search);
+    await user.type(search, 'doe');
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Jane Doe']);
+    await user.clear(search);
+    await user.type(search, 'ana smith');
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Ana Smith']);
+    await user.clear(search);
+    await user.type(search, 'nobody');
+    expect(screen.getByText('No customer found.')).toBeInTheDocument();
+    expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+    await user.clear(search);
+    expect(screen.getByText(/welcome, jane doe/i)).toBeInTheDocument();
+    await user.type(search, '   ');
+    expect(screen.getByText(/welcome, jane doe/i)).toBeInTheDocument();
+
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/api/customers/me')).toHaveLength(1);
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/api/customers')).toHaveLength(1);
+  });
+
+  it('clears the search query on logout so a later login starts fresh', async () => {
+    const fetchMock = mockLoginAndCustomerFetch();
+    const user = userEvent.setup();
+    renderApp('/login');
+    await logIn(user);
+
+    const search = await screen.findByRole('searchbox', { name: /search by customer name/i });
+    await user.type(search, 'nobody');
+    expect(screen.getByText('No customer found.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /log out/i }));
+    expect(await screen.findByRole('heading', { name: /log in/i })).toBeInTheDocument();
+    expect(screen.queryByRole('searchbox', { name: /search by customer name/i })).not.toBeInTheDocument();
+
+    await logIn(user);
+    const resetSearch = await screen.findByRole('searchbox', { name: /search by customer name/i });
+    expect(resetSearch).toHaveValue('');
+    expect(await screen.findByText(/welcome, jane doe/i)).toBeInTheDocument();
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/api/customers/me')).toHaveLength(2);
+    // The cached list was cleared on logout and fetched again for the new session.
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/api/customers')).toHaveLength(2);
+  });
+
+  it('keeps loading visible while the customer list request is pending', async () => {
+    let resolveList;
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
+      url === '/api/auth/login'
+        ? jsonResponse(200, { access_token: 'tkn', token_type: 'bearer', expires_in: 3600, customer: CUSTOMER })
+        : url === '/api/customers'
+          ? new Promise((resolve) => {
+              resolveList = resolve;
+            })
+          : jsonResponse(200, CUSTOMER),
+    );
+    const user = userEvent.setup();
+    renderApp('/login');
+    await logIn(user);
+
+    const search = await screen.findByRole('searchbox', { name: /search by customer name/i });
+    await user.type(search, 'nobody');
+    expect(screen.getByText('Loading customers…')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('No customer found.')).not.toBeInTheDocument();
+    resolveList(new Response(JSON.stringify(LIST), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    expect(await screen.findByText('No customer found.')).toBeInTheDocument();
+  });
+
+  it('keeps customer list API errors visible instead of showing a no-match result', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
+      url === '/api/auth/login'
+        ? jsonResponse(200, { access_token: 'tkn', token_type: 'bearer', expires_in: 3600, customer: CUSTOMER })
+        : url === '/api/customers'
+          ? jsonResponse(500, { detail: 'Customer service unavailable' })
+          : jsonResponse(200, CUSTOMER),
+    );
+    const user = userEvent.setup();
+    renderApp('/login');
+    await logIn(user);
+
+    const search = await screen.findByRole('searchbox', { name: /search by customer name/i });
+    await user.type(search, 'nobody');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Customer service unavailable');
+    expect(screen.queryByText('No customer found.')).not.toBeInTheDocument();
+  });
+
+  it('keeps customer details API errors visible when the query is blank', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
+      url === '/api/auth/login'
+        ? jsonResponse(200, { access_token: 'tkn', token_type: 'bearer', expires_in: 3600, customer: CUSTOMER })
+        : url === '/api/customers'
+          ? jsonResponse(200, LIST)
+          : jsonResponse(500, { detail: 'Customer service unavailable' }),
+    );
+    const user = userEvent.setup();
+    renderApp('/login');
+    await logIn(user);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Customer service unavailable');
+    expect(screen.queryByText('No customer found.')).not.toBeInTheDocument();
+  });
+
+  it('preserves session-expiration logout and clears the search input', async () => {
+    let resolveCustomer;
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
+      url === '/api/auth/login'
+        ? jsonResponse(200, { access_token: 'tkn', token_type: 'bearer', expires_in: 3600, customer: CUSTOMER })
+        : url === '/api/customers'
+          ? jsonResponse(200, LIST)
+          : new Promise((resolve) => {
+              resolveCustomer = resolve;
+            }),
+    );
+    const user = userEvent.setup();
+    renderApp('/login');
+    await logIn(user);
+
+    const search = await screen.findByRole('searchbox', { name: /search by customer name/i });
+    await user.type(search, 'nobody');
+    resolveCustomer(new Response(JSON.stringify({ detail: 'Not authenticated' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+
+    expect(await screen.findByRole('heading', { name: /log in/i })).toBeInTheDocument();
+    expect(screen.queryByRole('searchbox', { name: /search by customer name/i })).not.toBeInTheDocument();
+  });
+
   it('registers a customer and redirects to login', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(() => jsonResponse(201, CUSTOMER));
     const user = userEvent.setup();
@@ -67,7 +241,9 @@ describe('customer flows', () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
       url === '/api/auth/login'
         ? jsonResponse(200, { access_token: 'tkn', token_type: 'bearer', expires_in: 3600, customer: CUSTOMER })
-        : jsonResponse(200, CUSTOMER),
+        : url === '/api/customers'
+          ? jsonResponse(200, LIST)
+          : jsonResponse(200, CUSTOMER),
     );
     const user = userEvent.setup();
     renderApp('/login');

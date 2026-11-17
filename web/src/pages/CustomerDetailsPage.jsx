@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchCurrentCustomer } from '../api/customerApi.js';
 import { useAuth } from '../auth/AuthContext.jsx';
+import CustomerSearchResults from '../components/CustomerSearchResults.jsx';
+import { filterCustomersByName } from '../utils/customerSearch.js';
 
 const FIELDS = [
   ['Customer ID', 'id'],
@@ -17,7 +19,7 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-export default function CustomerDetailsPage() {
+export default function CustomerDetailsPage({ searchQuery, customerList, customerListError }) {
   const { token, logout } = useAuth();
   const navigate = useNavigate();
   const [customer, setCustomer] = useState(null);
@@ -40,6 +42,18 @@ export default function CustomerDetailsPage() {
       active = false;
     };
   }, [token, logout, navigate]);
+
+  if (searchQuery.trim() !== '') {
+    if (customerListError) {
+      return (
+        <div className="alert alert-error" role="alert">
+          {customerListError}
+        </div>
+      );
+    }
+    if (!customerList) return <p aria-busy="true">Loading customers…</p>;
+    return <CustomerSearchResults customers={filterCustomersByName(customerList, searchQuery)} />;
+  }
 
   if (error) {
     return (

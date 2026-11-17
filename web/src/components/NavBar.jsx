@@ -1,7 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
+import CustomerSearch from './CustomerSearch.jsx';
 
-export default function NavBar() {
+export default function NavBar({ searchQuery, onSearchChange }) {
   const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -13,6 +14,11 @@ export default function NavBar() {
   return (
     <nav className="navbar">
       <span className="brand">Customer Portal</span>
+      {isAuthenticated && (
+        <div className="nav-search">
+          <CustomerSearch value={searchQuery} onChange={onSearchChange} />
+        </div>
+      )}
       <div className="nav-links">
         {isAuthenticated ? (
           <>

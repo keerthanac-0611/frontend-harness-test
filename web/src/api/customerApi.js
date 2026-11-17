@@ -25,3 +25,7 @@ export function fetchCurrentCustomer(token) {
 export function fetchCustomerById(id, token) {
   return request('GET', ENDPOINTS.customerById(id), { token });
 }
+
+export function fetchCustomerList() {
+  return request('GET', ENDPOINTS.customers);
+}
